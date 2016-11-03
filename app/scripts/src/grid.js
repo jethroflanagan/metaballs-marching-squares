@@ -9,40 +9,90 @@ const yScale = d3.scale.linear()
 const cellWidth = 10;
 const cellHeight = 10;
 
-const numColumns = yScale(1) / cellWidth;
-const numRows = xScale(1) / cellHeight;
+const numColumns = Math.ceil(yScale(1) / cellWidth);
+const numRows = Math.ceil(xScale(1) / cellHeight);
+let container = null;
+console.log(numColumns, numRows);
+// 1D array, all values set to 0, mod `numColumns` is a new row
+// 2D arrays become clumsy with d3
+let cells = d3.range(numRows * numColumns)
+    .map( (d, i) => {
+        return {
+            value: 0,
+            x: i % numColumns * cellWidth,
+            y: Math.floor(i / numColumns) * cellHeight,
+        }
+    });
 
-// quick 2d array, all values set to 0
-export const grid = d3.range(numRows)
-    .map(d => d3.range(numColumns).map(d => 0));
+let debugCells = null;
 
-export const drawGrid = (container, xScale, yScale) => {
-    container
+function drawGrid () {
+    debugCells = container
         .append('g')
             .attr({
                 'class': 'Grid',
             })
         .selectAll('rect')
-        .data(grid)
+        .data(cells)
         .enter()
-        .append('g')
-            // .attr('transform', (d, i) => {
-            //     return 'translate(0, ' + i * cellHeight + ')';
-            // })
-        .selectAll('rect')
-        .data(d => d)
-        .enter()
-            .append('rect')
+            .append('rect');
+
+            debugCells
                 .attr(
                 {
                     'class':'Grid-cell',
-                    x: (d, x, y) => x * cellWidth,
-                    y: (d, x, y) => y * cellHeight,
+                    x: d => d.x,
+                    y: d => d.y,
                     width: cellWidth,
                     height: cellHeight,
-                    fill: rgba(0, 200, 0, 1),
+                    fill: d => {
+                        if (d > 1)
+                            d = 1;
+                        if (d < 0)
+                            d = 0;
+                        return rgba(0, 200, 0, d.value)
+                    },
                     'shape-rendering': 'crispEdges',
                     stroke: 'black',
                     'stroke-width': '1px'
                 });
+};
+
+function calculateMetaballs (balls) {
+    const w2 = cellWidth / 2; // cache
+    const h2 = cellHeight / 2; // cache
+    cells.map( (cell, i) => {
+        const x = cells[i].x;
+        const y = cells[i].y;
+        let sum = balls.reduce( (total, ball) => {
+            let dx = cell.x + w2 - ball.x;
+            let dy = cell.y + h2 - ball.y;
+            let r = ball.radius;
+            return total + (r * r) / ((dx * dx) + (dy * dy));
+        }, 0);
+        cell.value = sum;
+    });
+    update();
+    // console.log(cells);
+}
+
+function update () {
+    debugCells
+        .attr('fill', d => {
+            if (d > 1)
+                d = 1;
+            if (d < 0)
+                d = 0;
+            return rgba(0, 200, 0, d.value)
+        });
+}
+
+function setContainer (element) {
+    container = element;
+}
+
+export {
+    setContainer,
+    drawGrid,
+    calculateMetaballs,
 };

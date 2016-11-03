@@ -1,4 +1,4 @@
-import { drawGrid } from './grid';
+import { setContainer, drawGrid } from './grid';
 import { dimension } from './config';
 import { addBalls } from './balls';
 
@@ -9,5 +9,6 @@ const svg = d3.select('.App')
     .append('g')
         .attr('transform', 'translate(' + dimension.margin + ',' + dimension.margin + ')');
 
-drawGrid(svg);
+setContainer(svg);
+drawGrid();
 addBalls(svg, 10);

@@ -1,11 +1,12 @@
 import { dimension } from './config';
+import { calculateMetaballs } from './grid';
 import { translate, rgba } from './utils';
 
 // const
 
 const balls = [];
 
-const addBalls = (container, numBalls) => {
+function addBalls (container, numBalls) {
     const { drag } = setupInteraction(balls);
     // ensure they are away from edges just for generation
     const edgePadding = 10;
@@ -45,11 +46,13 @@ const addBalls = (container, numBalls) => {
 //   d3.select(this).attr("transform", "translate(" + x + "," + y + ")");
 // }
 
-const setupInteraction = (data) => {
+function setupInteraction (data) {
     const drag = d3.behavior.drag()
         .on("drag", function (d) {
             d.x += d3.event.dx;
             d.y += d3.event.dy;
+
+            // constraints
             if (d.x >= dimension.width)
                 d.x = dimension.width;
             if (d.y >= dimension.height)
@@ -58,9 +61,12 @@ const setupInteraction = (data) => {
                 d.x = 0;
             if (d.y <= 0)
                 d.y = 0;
+
             d3.select(this).attr({
                 'transform': d => translate(d.x, d.y),
             });
+
+            calculateMetaballs(balls);
         });
 
     return {
@@ -68,7 +74,11 @@ const setupInteraction = (data) => {
     }
 }
 
+function update () {
+
+};
+
 export {
     addBalls,
-    balls,
+    update,
 };
