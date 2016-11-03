@@ -23,8 +23,8 @@ function rgba(r, g, b, a) {
 var xScale = d3.scale.linear().range([0, dimension.height]);
 var yScale = d3.scale.linear().range([0, dimension.width]);
 
-var cellWidth = 10;
-var cellHeight = 10;
+var cellWidth = 7;
+var cellHeight = 7;
 
 var numColumns = Math.ceil(yScale(1) / cellWidth);
 var numRows = Math.ceil(xScale(1) / cellHeight);
@@ -60,11 +60,10 @@ function drawGrid() {
         fill: function fill(d) {
             if (d > 1) d = 1;
             if (d < 0) d = 0;
-            return rgba(0, 200, 0, d.value);
+            return rgba(0, 200, 200, d.value);
         },
         'shape-rendering': 'crispEdges',
-        stroke: 'black',
-        'stroke-width': '1px'
+        stroke: '#eee'
     });
 }
 
@@ -87,10 +86,16 @@ function calculateMetaballs(balls) {
 }
 
 function update() {
+    var reduction = 3;
+    var threshold = 0.4;
+    var rangeMultiplier = 1 / (1 - threshold);
     debugCells.attr('fill', function (d) {
         if (d > 1) d = 1;
         if (d < 0) d = 0;
-        return rgba(0, 200, 0, d.value);
+        var brightness = d.value;
+        brightness /= reduction;
+        if (brightness < threshold) brightness = 0;else brightness = (brightness - threshold) * rangeMultiplier * reduction;
+        return rgba(0, 200, 200, brightness);
     });
 }
 
@@ -121,6 +126,7 @@ function addBalls(container, numBalls) {
             direction: Math.random() * Math.PI * 2
         });
     }
+    update$1();
 
     return container.selectAll('circle').data(balls).enter().append('circle').attr({
         'classed': 'Ball',
@@ -137,7 +143,7 @@ function addBalls(container, numBalls) {
             return translate(d.x, d.y);
         },
         stroke: '#C00',
-        fill: rgba(0, 0, 0, 0.3)
+        fill: rgba(0, 0, 0, 0)
     }).call(drag);
 }
 
@@ -164,7 +170,7 @@ function setupInteraction(data) {
             }
         });
 
-        calculateMetaballs(balls);
+        update$1();
     });
 
     return {
@@ -172,8 +178,12 @@ function setupInteraction(data) {
     };
 }
 
+function update$1() {
+    calculateMetaballs(balls);
+}
+
 var svg = d3.select('.App').append('svg').attr('width', dimension.width + dimension.margin * 2).attr('height', dimension.height + dimension.margin * 2).append('g').attr('transform', 'translate(' + dimension.margin + ',' + dimension.margin + ')');
 
 setContainer(svg);
 drawGrid();
-addBalls(svg, 10);
+addBalls(svg, 8);

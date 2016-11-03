@@ -22,6 +22,7 @@ function addBalls (container, numBalls) {
             direction: Math.random() * Math.PI * 2,
         });
     }
+    update();
 
     return container.selectAll('circle')
         .data(balls)
@@ -34,7 +35,7 @@ function addBalls (container, numBalls) {
                     y: d => d.y,
                     transform: d => translate(d.x, d.y),
                     stroke: '#C00',
-                    fill: rgba(0, 0, 0, 0.3),
+                    fill: rgba(0, 0, 0, 0),
                 })
                 .call(drag);
 }
@@ -66,7 +67,7 @@ function setupInteraction (data) {
                 'transform': d => translate(d.x, d.y),
             });
 
-            calculateMetaballs(balls);
+            update();
         });
 
     return {
@@ -75,7 +76,7 @@ function setupInteraction (data) {
 }
 
 function update () {
-
+    calculateMetaballs(balls);
 };
 
 export {

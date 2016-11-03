@@ -6,8 +6,8 @@ const xScale = d3.scale.linear()
 const yScale = d3.scale.linear()
     .range([0, dimension.width]);
 
-const cellWidth = 10;
-const cellHeight = 10;
+const cellWidth = 7;
+const cellHeight = 7;
 
 const numColumns = Math.ceil(yScale(1) / cellWidth);
 const numRows = Math.ceil(xScale(1) / cellHeight);
@@ -50,11 +50,11 @@ function drawGrid () {
                             d = 1;
                         if (d < 0)
                             d = 0;
-                        return rgba(0, 200, 0, d.value)
+                        return rgba(0, 200, 200, d.value)
                     },
                     'shape-rendering': 'crispEdges',
-                    stroke: 'black',
-                    'stroke-width': '1px'
+                    stroke: '#eee',
+                    // 'stroke-width': '1px'
                 });
 };
 
@@ -77,13 +77,22 @@ function calculateMetaballs (balls) {
 }
 
 function update () {
+    const reduction = 3;
+    const threshold = 0.4;
+    const rangeMultiplier = 1 / (1 - threshold);
     debugCells
         .attr('fill', d => {
             if (d > 1)
                 d = 1;
             if (d < 0)
                 d = 0;
-            return rgba(0, 200, 0, d.value)
+            var brightness = d.value;
+            brightness /= reduction;
+            if (brightness < threshold)
+                brightness = 0;
+            else
+                brightness = (brightness - threshold) * rangeMultiplier * reduction;
+            return rgba(0, 200, 200, brightness)
         });
 }
 

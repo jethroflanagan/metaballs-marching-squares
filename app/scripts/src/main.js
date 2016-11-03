@@ -11,4 +11,4 @@ const svg = d3.select('.App')
 
 setContainer(svg);
 drawGrid();
-addBalls(svg, 10);
+addBalls(svg, 8);
