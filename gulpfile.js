@@ -20,8 +20,10 @@ shell       = require('gulp-shell');
 plumber     = require('gulp-plumber');
 watch       = require('gulp-watch');
 sourcemaps  = require('gulp-sourcemaps');
+babel       = require('gulp-babel');
+rollup      = require('gulp-rollup');
+rollupIncludePaths = require('rollup-plugin-includepaths');
 // include     = require('gulp-html-tag-include');
-
 gulp.task('browserSync', function() {
     browserSync({
         server: {
@@ -63,20 +65,41 @@ gulp.task('fonts', function(tmp) {
 });
 //compiling our Javascripts
 gulp.task('scripts', function() {
-    //this is where our dev JS scripts are
-    return gulp.src(['app/scripts/src/_includes/**/*.js', 'app/scripts/src/**/*.js'])
-                //prevent pipe breaking caused by errors from gulp plugins
-                .pipe(plumber())
-                .pipe(sourcemaps.init())
-                //this is the filename of the compressed version of our JS
-                .pipe(concat('app.js'))
-                //catch errors
-                .on('error', gutil.log)
-                .pipe(sourcemaps.write())
-                //where we will store our finalized, compressed script
-                .pipe(gulp.dest('app/scripts'))
-                //notify browserSync to refresh
-                .pipe(browserSync.reload({stream: true}));
+    // //this is where our dev JS scripts are
+    // return gulp.src(['app/scripts/src/_includes/**/*.js', 'app/scripts/src/**/*.js'])
+    //             //prevent pipe breaking caused by errors from gulp plugins
+    //             .pipe(plumber())
+    //             .pipe(sourcemaps.init())
+    //             //this is the filename of the compressed version of our JS
+    //             .pipe(concat('app.js'))
+    //             //catch errors
+    //             .on('error', gutil.log)
+    //             .pipe(sourcemaps.write())
+    //             //where we will store our finalized, compressed script
+    //             .pipe(gulp.dest('app/scripts'))
+    //             //notify browserSync to refresh
+    //             .pipe(browserSync.reload({stream: true}));
+    return gulp.src('app/scripts/src/**/*.js')
+
+        .pipe(plumber())
+        // .pipe(sourcemaps.init())
+        .pipe(rollup({
+            sourceMap: true,
+            plugins: [
+                rollupIncludePaths({
+                    paths: ['app/js']
+                })
+            ],
+            entry: 'app/scripts/src/main.js',
+        }))
+        .pipe(babel({
+            presets: ['es2015']
+        }))
+        .pipe(concat('app.js'))
+        .pipe(sourcemaps.write())
+        .on('error', gutil.log)
+        .pipe(gulp.dest('app/scripts'))
+        .pipe(browserSync.reload({stream: true}));
 });
 
 //compiling our Javascripts for deployment
@@ -221,7 +244,6 @@ gulp.task('scaffold', function() {
 //  start up browserSync
 //  compress all scripts and SCSS files
 gulp.task('default', function() {
-    gutil.log('Hello world!');
     gulp.run('scripts');//, 'scripts', 'styles', 'fonts')
     gulp.run('styles');//, 'scripts', 'styles', 'fonts')
     gulp.run('fonts');//, 'scripts', 'styles', 'fonts')

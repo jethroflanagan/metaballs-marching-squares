@@ -1,0 +1,45 @@
+{
+    "bubbles": [
+        {
+            "name": "Wants",
+            "categories": [
+                {
+                    "name": "Eating Out",
+                },
+                {
+                    "name": "Entertainment",
+                },
+                {
+                    "name": "Shopping",
+                },
+            ],
+        },
+        {
+            "name": "Needs",
+        },
+        {
+            "name": "Goals",
+        },
+        {
+            "name": "Future",
+        },
+    ],
+    "categories": [
+        {
+            "id": 0,
+            "name": "Eating out & takeouts",
+            "budget": [
+                {
+                    "date": "",
+                    "amount": 500,
+                },
+            ]
+        },
+        {
+            "id": 1,
+            "name": "ATM Cash",
+            "transactions": [],
+            "budget": 0,
+        },
+    ]
+}
