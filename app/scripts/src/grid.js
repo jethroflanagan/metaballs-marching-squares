@@ -85,26 +85,41 @@ function getMarchingSquareCorner (balls, cell, offsetX, offsetY) {
         let r = ball.radius;
         const result = (r * r) / ((dx * dx) + (dy * dy));
         return total + result;
-    }, 0) > 1 ? 1 : 0;
+    }, 0);
 };
 
 function calculateMarchingSquares (balls) {
     cells.map( (cell, i) => {
         const x = cells[i].x;
         const y = cells[i].y;
-        let sumTL = getMarchingSquareCorner(balls, cell, 0, 0) << 3;
-        let sumTR = getMarchingSquareCorner(balls, cell, cellWidth, 0) << 2;
-        let sumBR = getMarchingSquareCorner(balls, cell, cellWidth, cellHeight) << 1;
+        const simplify = (v) => (v > 1 ? 1 : 0);
+        let sumTL = getMarchingSquareCorner(balls, cell, 0, 0);
+        let sumTR = getMarchingSquareCorner(balls, cell, cellWidth, 0);
+        let sumBR = getMarchingSquareCorner(balls, cell, cellWidth, cellHeight);
         let sumBL = getMarchingSquareCorner(balls, cell, 0, cellHeight);
 
         // marching squares
         // http://jamie-wong.com/images/14-08-11/marching-squares-mapping.png
         // The configuration number between 0-15 is computed by assigning a value of 0 to each of the corners where f(x,y)<1f(x,y)<1, and a value of 1 where f(x,y)≥1f(x,y)≥1, then interpreting these bits as a binary number, ordered (southwest, southeast, northeast, northwest).
         // cell.value = parseInt('' + sumBL + sumBR + sumTR + sumTL, 2);
-        cell.value = sumBL + sumBR + sumTR + sumTL;
+        cell.value = simplify(sumBL) +
+            (simplify(sumBR) << 1) +
+            (simplify(sumTR) << 2) +
+            (simplify(sumTL) << 3);
+        cell.rawValue = [sumBL, sumBR, sumTR, sumTL];
     });
     update();
 }
+
+function getLerpForSquare (x0, y0, x1, y1, threshold) {
+    if (!threshold)
+        threshold = 1;
+	if (x0 === x1) {
+	    return 0.5;
+	}
+
+	return y0 + (y1 - y0) * (threshold - x0) / (x1 - x0);
+};
 
 // get x,y back as (0-2, 0-2)->(0-2, 0-2) for a line within square from edge to edge
 // where x=0 is leftmost, x=1 is middle, x=2 is rightmost
@@ -112,6 +127,8 @@ function calculateMarchingSquares (balls) {
 //  (0,1) -> (1,2)
 // return [0,1, 1,2]
 //         x,y->x,y
+// Since range is 0->2, multiply by half size of cell to get actual point
+//
 // REF
 // x
 //   +---+
@@ -123,40 +140,66 @@ function calculateMarchingSquares (balls) {
 //   | 1 |
 //   +---+
 //     2
+// TODO put contour in order
+// TODO write as [left,up] , [up, down] to describe lines
+// TODO square give location of next square to march to, so saddle points just return one line depending on what the previous cell ends on
+//      e.g. end on right, means give the saddle line that starts on left
+
 function getMarchingSquaresLine (value) {
-    switch (value) {
-        case 1:
-        case 14:
-            return [{x:0,y:1}, {x:1,y:2}];
-        case 2:
-        case 13:
-            return [{x:1,y:2}, {x:2,y:1}]
-        case 3:
-        case 12:
-            return [{x:0,y:1}, {x:2,y:1}]
-        case 4:
-        case 11:
-            return [{x:1,y:0}, {x:2,y:1}]
-        case 5: // saddle
-            return [
-                [{x:0,y:1}, {x:1,y:0}],
-                [{x:1,y:2}, {x:2,y:1}],
-            ];
-        case 6:
-        case 9:
-            return [{x:1,y:0}, {x:1,y:2}]
-        case 7:
-        case 8:
-            return [{x:0,y:1}, {x:1,y:0}]
-        case 10:
-            return [
-                [{x:1,y:0}, {x:2,y:1}],
-                [{x:0,y:1}, {x:1,y:2}],
-            ];
-        case 0:
-        case 15:
-            return null
-    }
+    // shared results for the rest e.g. 12 and 3 are the same
+    // 0 and 15 aren't drawn
+    if (value > 7 && value !== 10)
+        value = 15 - value;
+
+    return {
+        1: [{x:0,y:1}, {x:1,y:2}],
+        2: [{x:1,y:2}, {x:2,y:1}],
+        3: [{x:0,y:1}, {x:2,y:1}],
+        4: [{x:1,y:0}, {x:2,y:1}],
+        5: [
+            [{x:0,y:1}, {x:1,y:0}],
+            [{x:1,y:2}, {x:2,y:1}],
+        ],
+        6: [{x:1,y:0}, {x:1,y:2}],
+        7: [{x:0,y:1}, {x:1,y:0}],
+        10: [
+            [{x:1,y:0}, {x:2,y:1}],
+            [{x:0,y:1}, {x:1,y:2}],
+        ]
+    }[value];
+    // switch (value) {
+    //     case 1:
+    //     case 14:
+    //         return [{x:0,y:1}, {x:1,y:2}];
+    //     case 2:
+    //     case 13:
+    //         return [{x:1,y:2}, {x:2,y:1}]
+    //     case 3:
+    //     case 12:
+    //         return [{x:0,y:1}, {x:2,y:1}]
+    //     case 4:
+    //     case 11:
+    //         return [{x:1,y:0}, {x:2,y:1}]
+    //     case 5: // saddle
+    //         return [
+    //             [{x:0,y:1}, {x:1,y:0}],
+    //             [{x:1,y:2}, {x:2,y:1}],
+    //         ];
+    //     case 6:
+    //     case 9:
+    //         return [{x:1,y:0}, {x:1,y:2}]
+    //     case 7:
+    //     case 8:
+    //         return [{x:0,y:1}, {x:1,y:0}]
+    //     case 10:
+    //         return [
+    //             [{x:1,y:0}, {x:2,y:1}],
+    //             [{x:0,y:1}, {x:1,y:2}],
+    //         ];
+    //     case 0:
+    //     case 15:
+    //         return null
+    // }
 }
 
 function drawMarchingSquares () {
@@ -191,6 +234,7 @@ function drawMarchingSquares () {
                 });
         };
         if (points[0].hasOwnProperty('x')) {
+            points[0].x
             draw(points);
         }
         else {
