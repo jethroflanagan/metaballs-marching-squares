@@ -24,7 +24,9 @@ function addBalls (container, numBalls) {
     }
     update();
 
-    return container.selectAll('circle')
+    return container
+        .append('g')
+        .selectAll('circle')
         .data(balls)
         .enter()
             .append('circle')

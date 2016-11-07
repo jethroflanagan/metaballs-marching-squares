@@ -1,4 +1,5 @@
 dist
+app/scripts/app.js
+app/styles/styles.css
+npm-debug.log
 node_modules
-src/app/scripts/app.js
-src/app/styles/styles.css
