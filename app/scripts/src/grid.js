@@ -1,3 +1,4 @@
+import * as _ from 'lodash';
 import { dimension } from './config';
 import { rgba } from './utils';
 
@@ -22,10 +23,14 @@ console.log(numColumns, numRows);
 // 2D arrays become clumsy with d3
 let cells = d3.range(numRows * numColumns)
     .map( (d, i) => {
+        const col = i % numColumns;
+        const row = Math.floor(i / numColumns);
         return {
+            row,
+            col,
+            x: col * cellWidth,
+            y: row * cellHeight,
             value: 0,
-            x: i % numColumns * cellWidth,
-            y: Math.floor(i / numColumns) * cellHeight,
         }
     });
 
@@ -140,66 +145,50 @@ function getLerpForSquare (x0, y0, x1, y1, threshold) {
 //   | 1 |
 //   +---+
 //     2
+
+// Case 0   Case 1   Case 2   Case 3   Case 4   Case 5   Case 6   Case 7
+// O-----O  O-----O  O-----O  O-----O  O-----#  O-----#  O-----#  O-----#
+// |     |  |     |  |     |  |     |  |    \|  |/    |  |  |  |  |/    |
+// |     |  |\    |  |    /|  |-----|  |     |  |    /|  |  |  |  |     |
+// O-----O  #-----O  O-----#  #-----#  O-----O  #-----O  O-----#  #-----#
+//
+// Case 8   Case 9   Case 10  Case 11  Case 12  Case 13  Case 14  Case 15
+// #-----O  #-----O  #-----O  #-----O  #-----#  #-----#  #-----#  #-----#
+// |/    |  |  |  |  |    \|  |    \|  |-----|  |     |  |     |  |     |
+// |     |  |  |  |  |\    |  |     |  |     |  |    /|  |\    |  |     |
+// O-----O  #-----O  O-----#  #-----#  O-----O  #-----O  O-----#  #-----#
 // TODO put contour in order
 // TODO write as [left,up] , [up, down] to describe lines
 // TODO square give location of next square to march to, so saddle points just return one line depending on what the previous cell ends on
 //      e.g. end on right, means give the saddle line that starts on left
 
-function getMarchingSquaresLine (value) {
-    // shared results for the rest e.g. 12 and 3 are the same
-    // 0 and 15 aren't drawn
-    if (value > 7 && value !== 10)
-        value = 15 - value;
-
+function getNextMarchingSquareCell (value, previous) {
     return {
-        1: [{x:0,y:1}, {x:1,y:2}],
-        2: [{x:1,y:2}, {x:2,y:1}],
-        3: [{x:0,y:1}, {x:2,y:1}],
-        4: [{x:1,y:0}, {x:2,y:1}],
-        5: [
-            [{x:0,y:1}, {x:1,y:0}],
-            [{x:1,y:2}, {x:2,y:1}],
-        ],
-        6: [{x:1,y:0}, {x:1,y:2}],
-        7: [{x:0,y:1}, {x:1,y:0}],
-        10: [
-            [{x:1,y:0}, {x:2,y:1}],
-            [{x:0,y:1}, {x:1,y:2}],
-        ]
-    }[value];
-    // switch (value) {
-    //     case 1:
-    //     case 14:
-    //         return [{x:0,y:1}, {x:1,y:2}];
-    //     case 2:
-    //     case 13:
-    //         return [{x:1,y:2}, {x:2,y:1}]
-    //     case 3:
-    //     case 12:
-    //         return [{x:0,y:1}, {x:2,y:1}]
-    //     case 4:
-    //     case 11:
-    //         return [{x:1,y:0}, {x:2,y:1}]
-    //     case 5: // saddle
-    //         return [
-    //             [{x:0,y:1}, {x:1,y:0}],
-    //             [{x:1,y:2}, {x:2,y:1}],
-    //         ];
-    //     case 6:
-    //     case 9:
-    //         return [{x:1,y:0}, {x:1,y:2}]
-    //     case 7:
-    //     case 8:
-    //         return [{x:0,y:1}, {x:1,y:0}]
-    //     case 10:
-    //         return [
-    //             [{x:1,y:0}, {x:2,y:1}],
-    //             [{x:0,y:1}, {x:1,y:2}],
-    //         ];
-    //     case 0:
-    //     case 15:
-    //         return null
-    // }
+        1:  [-1,-1],// [DOWN, LEFT],
+        2:  [-1, 1],// [RIGHT, DOWN],
+        3:  [-2, 0],// [RIGHT, LEFT],
+        4:  [ 1, 1],// [UP, RIGHT],
+        5:  [,],// previous === UP ? [DOWN, RIGHT] : [UP, LEFT],
+        6:  [ 0, 2],// [UP, DOWN],
+        7:  [-1, 1],// [UP, LEFT],
+        8:  [ 1,-1],// [LEFT, UP],
+        9:  [ 0,-2],// [DOWN, UP],
+        10: [,],// previous === RIGHT ? [LEFT, DOWN] : [RIGHT, UP],
+        11: [,],// [RIGHT, UP],
+        12: [,],// [LEFT, RIGHT],
+        13: [,],// [DOWN, RIGHT],
+        14: [,],// [LEFT, DOWN],
+    }
+}
+
+function getMarchingSquaresContour (cells) {
+    let path = [];
+    let previous = null;
+    let cell = cells[0];
+    while (nextCell !== cell) {
+        nextCell = getNextMarchingSquareCell(cell.value, previous.value);
+
+    }
 }
 
 function drawMarchingSquares () {
@@ -214,8 +203,9 @@ function drawMarchingSquares () {
     const w2 = cellWidth / 2; // cache
     const h2 = cellHeight / 2; // cache
 
-    cells.map(cell => {
-        const points = getMarchingSquaresLine(cell.value);
+    let availableCells = _.filter(cells, cell => cell.value > 0);
+    const points = getMarchingSquaresLine(availableCells);
+
         if (!points)
             return;
 
