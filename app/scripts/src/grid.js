@@ -1,4 +1,3 @@
-import * as _ from 'lodash';
 import { dimension } from './config';
 import { rgba } from './utils';
 
@@ -22,10 +21,11 @@ console.log(numColumns, numRows);
 // 1D array, all values set to 0, mod `numColumns` is a new row
 // 2D arrays become clumsy with d3
 let cells = d3.range(numRows * numColumns)
-    .map( (d, i) => {
-        const col = i % numColumns;
-        const row = Math.floor(i / numColumns);
+    .map( (d, id) => {
+        const col = id % numColumns;
+        const row = Math.floor(id / numColumns);
         return {
+            id,
             row,
             col,
             x: col * cellWidth,
@@ -162,33 +162,60 @@ function getLerpForSquare (x0, y0, x1, y1, threshold) {
 // TODO square give location of next square to march to, so saddle points just return one line depending on what the previous cell ends on
 //      e.g. end on right, means give the saddle line that starts on left
 
-function getNextMarchingSquareCell (value, previous) {
-    return {
-        1:  [-1,-1],// [DOWN, LEFT],
-        2:  [-1, 1],// [RIGHT, DOWN],
-        3:  [-2, 0],// [RIGHT, LEFT],
-        4:  [ 1, 1],// [UP, RIGHT],
-        5:  [,],// previous === UP ? [DOWN, RIGHT] : [UP, LEFT],
-        6:  [ 0, 2],// [UP, DOWN],
-        7:  [-1, 1],// [UP, LEFT],
-        8:  [ 1,-1],// [LEFT, UP],
-        9:  [ 0,-2],// [DOWN, UP],
-        10: [,],// previous === RIGHT ? [LEFT, DOWN] : [RIGHT, UP],
-        11: [,],// [RIGHT, UP],
-        12: [,],// [LEFT, RIGHT],
-        13: [,],// [DOWN, RIGHT],
-        14: [,],// [LEFT, DOWN],
+function getMarchingSquareDirection (value, previousDirection) {
+    const LEFT = [-1, 0];
+    const RIGHT = [1, 0];
+    const UP = [0, -1];
+    const DOWN = [0, 1];
+    switch (value) {
+        case 1: return LEFT; // [DOWN, LEFT],
+        case 2: return DOWN; // [RIGHT, DOWN],
+        case 3: return LEFT; // [RIGHT, LEFT],
+        case 4: return RIGHT; // [UP, RIGHT],
+        case 5: return previousDirection[0] === UP[0] && previousDirection[1] === UP[1] // previousDirection === UP ? [DOWN, RIGHT] : [UP, LEFT],
+                ? RIGHT
+                : LEFT;
+        case 6: return DOWN; // [UP, DOWN],
+        case 7: return LEFT; // [UP, LEFT],
+        case 8: return UP; // [LEFT, UP],
+        case 9: return UP; // [DOWN, UP],
+        case 10: return previousDirection[0] === RIGHT[0] && previousDirection[1] === RIGHT[1] // previousDirection === RIGHT ? [LEFT, DOWN] : [RIGHT, UP],
+                ? DOWN
+                : UP;
+        case 11: return UP; // [RIGHT, UP],
+        case 12: return RIGHT; // [LEFT, RIGHT],
+        case 13: return RIGHT; // [DOWN, RIGHT],
+        case 14: return DOWN; // [LEFT, DOWN],
+    };
+}
+
+function getCell (col, row) {
+    return cells[numColumns * row + col];
+}
+
+function getEdge (cells, contour) {
+    let cell;
+    for (var i = 0; i < cells.length; i++) {
+        const cell = cells[i];
+        if (cell.value > 0 && cell.value < 15/* &&
+            _.find(contour, cell) === -1*/) {
+            return cell;
+        }
     }
 }
 
 function getMarchingSquaresContour (cells) {
-    let path = [];
-    let previous = null;
-    let cell = cells[0];
-    while (nextCell !== cell) {
-        nextCell = getNextMarchingSquareCell(cell.value, previous.value);
-
-    }
+    let previousDirection = null;
+    const startingCell = getEdge(cells);
+    let contour = [startingCell];
+    let cell = startingCell;
+    do {
+        let direction = getMarchingSquareDirection(cell.value, previousDirection);
+        cell = getCell(cell.col + direction[0], cell.row + direction[1]);
+        contour.push(cell);
+        previousDirection = direction;
+    } while (cell !== startingCell)
+    return contour;
 }
 
 function drawMarchingSquares () {
@@ -203,35 +230,35 @@ function drawMarchingSquares () {
     const w2 = cellWidth / 2; // cache
     const h2 = cellHeight / 2; // cache
 
-    let availableCells = _.filter(cells, cell => cell.value > 0);
-    const points = getMarchingSquaresLine(availableCells);
+    // let availableCells = cells.filter(cell => cell.value > 0);
+    const points = getMarchingSquaresContour(cells);
 
-        if (!points)
-            return;
+    if (!points)
+        return;
 
-        const draw = (points) => {
-            const path = d3.svg.line()
-                .x(d => cell.x + d.x * w2)
-                .y(d => cell.y + d.y * h2)
-                .interpolate('linear');
+    const draw = (points) => {
+        const path = d3.svg.line()
+            .x(d => d.x + w2)
+            .y(d => d.y + h2)
+            .interpolate('linear');
 
-            allPaths
-                .append('path')
-                .attr({
-                    d: path(points),
-                    stroke: '#000',
-                    'stroke-width': 1,
-                });
-        };
-        if (points[0].hasOwnProperty('x')) {
-            points[0].x
-            draw(points);
-        }
-        else {
-            draw(points[0]);
-            draw(points[1]);
-        }
-    });
+        allPaths
+            .append('path')
+            .attr({
+                d: path(points),
+                stroke: '#000',
+                'stroke-width': 1,
+                fill: rgba(0,0,0,0.2),
+            });
+    };
+    if (points[0].hasOwnProperty('x')) {
+        points[0].x
+        draw(points);
+    }
+    else {
+        draw(points[0]);
+        draw(points[1]);
+    }
 }
 
 function calculateMetaballs (balls) {
