@@ -1,9 +1,11 @@
 import * as config from './config';
 import { rgba } from './utils';
-const LEFT = [-1, 0];
-const RIGHT = [1, 0];
-const UP = [0, -1];
-const DOWN = [0, 1];
+
+// Use name for cheap comparison
+const LEFT = { x: -1, y: 0, name: 'left'};
+const RIGHT = { x: 1, y: 0, name: 'right'};
+const UP = { x: 0, y: -1, name: 'up'};
+const DOWN = { x: 0, y: 1, name: 'down'};
 
 const { cellWidth, cellHeight } = config.grid;
 const { dimension } = config;
@@ -172,14 +174,14 @@ function getMarchingSquareDirection (value, previousDirection) {
         case 2: return DOWN; // [RIGHT, DOWN],
         case 3: return LEFT; // [RIGHT, LEFT],
         case 4: return RIGHT; // [UP, RIGHT],
-        case 5: return previousDirection[0] === UP[0] && previousDirection[1] === UP[1] // previousDirection === UP ? [DOWN, RIGHT] : [UP, LEFT],
+        case 5: return previousDirection.name === UP.name && previousDirection.name === UP.name // previousDirection === UP ? [DOWN, RIGHT] : [UP, LEFT],
                 ? RIGHT
                 : LEFT;
         case 6: return DOWN; // [UP, DOWN],
         case 7: return LEFT; // [UP, LEFT],
         case 8: return UP; // [LEFT, UP],
         case 9: return UP; // [DOWN, UP],
-        case 10: return previousDirection[0] === RIGHT[0] && previousDirection[1] === RIGHT[1] // previousDirection === RIGHT ? [LEFT, DOWN] : [RIGHT, UP],
+        case 10: return previousDirection.name === RIGHT.name && previousDirection.name === RIGHT.name // previousDirection === RIGHT ? [LEFT, DOWN] : [RIGHT, UP],
                 ? DOWN
                 : UP;
         case 11: return UP; // [RIGHT, UP],
@@ -190,6 +192,10 @@ function getMarchingSquareDirection (value, previousDirection) {
 }
 
 function getCell (col, row) {
+    if (col < 0 || col > numColumns - 1 ||
+            row < 0 || row > numRows - 1) {
+        return null;
+    }
     return cells[numColumns * row + col];
 }
 
@@ -204,9 +210,8 @@ function getEdge (cells, contour) {
     }
 }
 
-
 function getMarchingSquaresContour (cells) {
-    let previousDirection = null;
+    let previousDirection = DOWN; // set to DOWN for offgrid handling
     const startingCell = getEdge(cells);
     let contour = [];
     let cell = startingCell;
@@ -216,12 +221,75 @@ function getMarchingSquaresContour (cells) {
         if (!direction) {
             direction = previousDirection;
         }
-        let nextCell = getCell(cell.col + direction[0], cell.row + direction[1]);
-        // if (!
+        let nextCell = getCell(cell.col + direction.x, cell.row + direction.y);
+        // Handle offgrid positions by drawing along the edges
+        if (!nextCell) {
+            // top left cell handled by 'DOWN' default direction
+            // special case on top right cell
+            if (cell.col === numColumns -1 && cell.row === 0) {
+                direction = LEFT;
+            }
+            // special case on bottom right cell
+            else if (cell.col === numColumns -1 && cell.row === numRows - 1) {
+                direction = UP;
+            }
+            // special case on bottom left cell
+            else if (cell.col === 0 && cell.row === numRows - 1) {
+                direction = RIGHT;
+            }
+            // left or right edge
+            else if (cell.col <= 0 || cell.col >= numColumns - 1) {
+                direction = UP;
+                switch (cell.value) {
+                    case 2:
+                    case 4:
+                    case 6:
+                    case 7:
+                    case 14:
+                        direction = DOWN;
+                        break;
+                    case 15:
+                        direction = previousDirection;
+                }
+            }
+            // top or bottom edge
+            else {
+                direction = LEFT;
+                switch (cell.value) {
+                    case 2:
+                    case 6:
+                    case 8:
+                    case 12:
+                    case 13:
+                    case 14:
+                        direction = RIGHT;
+                        break;
+                    case 15:
+                        direction = previousDirection;
+                }
+            }
+            // Catch problems
+            if (!direction) {
+                console.error('No direction', cell);
+                debugger;
+            }
+            nextCell = getCell(cell.col + direction.x, cell.row + direction.y);
+            if (!nextCell) {
+                console.error('No next cell', cell);
+                debugger;
+            }
+        }
+        if (direction === LEFT && previousDirection === RIGHT ||
+            direction === RIGHT && previousDirection === LEFT ||
+            direction === UP && previousDirection === DOWN ||
+            direction === DOWN && previousDirection === UP) {
+            console.error('Endless loop detected', cell);
+            debugger
+        }
         // TODO draw contour on edges not middle, from previous end to current end
         contour.push({
-            x: cell.x + direction[0]*cellHeight/2,
-            y: cell.y + direction[1]*cellWidth/2
+            x: cell.x + direction.x * cellHeight / 2,
+            y: cell.y + direction.y * cellWidth / 2,
         });
         cell = nextCell;
         previousDirection = direction;
