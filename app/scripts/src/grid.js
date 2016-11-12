@@ -79,7 +79,7 @@ function drawGrid () {
     debugCellsText = debugCells
         .append('text')
             .attr({
-                fill: '#000',
+                fill: 'transparent',
                 'font-family': 'Helvetica',
                 'font-size': '12px',
                 x: d => d.x + cellWidth / 2,
@@ -122,14 +122,9 @@ function calculateMarchingSquares (balls) {
     update();
 }
 
-function getLerpForSquare (x0, y0, x1, y1, threshold) {
-    if (!threshold)
-        threshold = 1;
-	if (x0 === x1) {
-	    return 0.5;
-	}
-
-	return y0 + (y1 - y0) * (threshold - x0) / (x1 - x0);
+function getLerpForPoints (a, b) {
+    const THRESHOLD = 1;
+    return (THRESHOLD - a) / (b - a)
 };
 
 // get x,y back as (0-2, 0-2)->(0-2, 0-2) for a line within square from edge to edge
@@ -286,10 +281,26 @@ function getMarchingSquaresContour (cells) {
             console.error('Endless loop detected', cell);
             debugger
         }
-        // TODO draw contour on edges not middle, from previous end to current end
+        // TODO simplify lerping
+        let lerpX = 0;
+        let lerpY = 0;
+        // handle endpoint edge lerp (i.e. only care about vertices at endpoint)
+        // points are anti-clockwise on square starting bottom left
+        if (cell.value === 2 || cell.value === 6 || cell.value === 14) {
+            lerpX = getLerpForPoints(cell.rawValue[0], cell.rawValue[1]) * cellWidth - cellWidth / 2;
+        }
+        if (cell.value === 8 || cell.value === 9 || cell.value === 11) {
+            lerpX = getLerpForPoints(cell.rawValue[3], cell.rawValue[2]) * cellWidth - cellWidth / 2;
+        }
+        if (cell.value === 7 || cell.value === 1 || cell.value === 3) {
+            lerpY = getLerpForPoints(cell.rawValue[3], cell.rawValue[0]) * cellWidth - cellWidth / 2;
+        }
+        if (cell.value === 4 || cell.value === 13 || cell.value === 12) {
+            lerpY = getLerpForPoints(cell.rawValue[2], cell.rawValue[1]) * cellWidth - cellWidth / 2;
+        }
         contour.push({
-            x: cell.x + direction.x * cellHeight / 2,
-            y: cell.y + direction.y * cellWidth / 2,
+            x: cell.x + direction.x * cellWidth / 2 + lerpX,
+            y: cell.y + direction.y * cellHeight / 2 + lerpY,
         });
         cell = nextCell;
         previousDirection = direction;
@@ -318,8 +329,8 @@ function drawMarchingSquares () {
 
     const draw = (points) => {
         const path = d3.svg.line()
-            .x(d => d.x + w2)
-            .y(d => d.y +h2)
+            .x(d => d.x + w2) // w2 draw through middle of cell
+            .y(d => d.y + h2) // h2 draw through middle of cell
             .interpolate('linear');
 
         allPaths

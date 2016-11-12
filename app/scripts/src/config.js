@@ -9,3 +9,6 @@ export const grid = {
     cellWidth: 20,
     cellHeight: 20,
 }
+export const balls = {
+    numToAdd: 4,
+}
