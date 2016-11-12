@@ -1,5 +1,9 @@
 import * as config from './config';
 import { rgba } from './utils';
+const LEFT = [-1, 0];
+const RIGHT = [1, 0];
+const UP = [0, -1];
+const DOWN = [0, 1];
 
 const { cellWidth, cellHeight } = config.grid;
 const { dimension } = config;
@@ -163,10 +167,6 @@ function getLerpForSquare (x0, y0, x1, y1, threshold) {
 //      e.g. end on right, means give the saddle line that starts on left
 
 function getMarchingSquareDirection (value, previousDirection) {
-    const LEFT = [-1, 0];
-    const RIGHT = [1, 0];
-    const UP = [0, -1];
-    const DOWN = [0, 1];
     switch (value) {
         case 1: return LEFT; // [DOWN, LEFT],
         case 2: return DOWN; // [RIGHT, DOWN],
@@ -186,8 +186,6 @@ function getMarchingSquareDirection (value, previousDirection) {
         case 12: return RIGHT; // [LEFT, RIGHT],
         case 13: return RIGHT; // [DOWN, RIGHT],
         case 14: return DOWN; // [LEFT, DOWN],
-        // used when edge of the grid is hit, keep moving in previous direction
-        case 15: return previousDirection;
     };
 }
 
@@ -206,19 +204,29 @@ function getEdge (cells, contour) {
     }
 }
 
+
 function getMarchingSquaresContour (cells) {
     let previousDirection = null;
     const startingCell = getEdge(cells);
-    let contour = [startingCell];
+    let contour = [];
     let cell = startingCell;
     do {
         let direction = getMarchingSquareDirection(cell.value, previousDirection);
-        if (!direction)
-            console.log(direction, '|', contour)
-        cell = getCell(cell.col + direction[0], cell.row + direction[1]);
-        contour.push(cell);
+        // used when edge of the grid is hit, keep moving in previous direction based on which edge we're on
+        if (!direction) {
+            direction = previousDirection;
+        }
+        let nextCell = getCell(cell.col + direction[0], cell.row + direction[1]);
+        // if (!
+        // TODO draw contour on edges not middle, from previous end to current end
+        contour.push({
+            x: cell.x + direction[0]*cellHeight/2,
+            y: cell.y + direction[1]*cellWidth/2
+        });
+        cell = nextCell;
         previousDirection = direction;
-    } while (cell !== startingCell)
+    } while (cell !== startingCell);
+    contour.push(contour[0])
     return contour;
 }
 
@@ -234,8 +242,8 @@ function drawMarchingSquares () {
     const w2 = cellWidth / 2; // cache
     const h2 = cellHeight / 2; // cache
 
-    // let availableCells = cells.filter(cell => cell.value > 0);
-    const points = getMarchingSquaresContour(cells);
+    let availableCells = cells.filter(cell => cell.value > 0 && cell.value < 15);
+    const points = getMarchingSquaresContour(availableCells);
 
     if (!points)
         return;
@@ -243,7 +251,7 @@ function drawMarchingSquares () {
     const draw = (points) => {
         const path = d3.svg.line()
             .x(d => d.x + w2)
-            .y(d => d.y + h2)
+            .y(d => d.y +h2)
             .interpolate('linear');
 
         allPaths
@@ -257,7 +265,7 @@ function drawMarchingSquares () {
             });
     };
     if (points[0].hasOwnProperty('x')) {
-        points[0].x
+        // points[0].x
         draw(points);
     }
     else {
