@@ -1,13 +1,13 @@
-import { dimension } from './config';
+import * as config from './config';
 import { rgba } from './utils';
+
+const { cellWidth, cellHeight } = config.grid;
+const { dimension } = config;
 
 const xScale = d3.scale.linear()
     .range([0, dimension.height]);
 const yScale = d3.scale.linear()
     .range([0, dimension.width]);
-
-const cellWidth = 40;
-const cellHeight = 40;
 
 const numColumns = Math.ceil(yScale(1) / cellWidth);
 const numRows = Math.ceil(xScale(1) / cellHeight);
@@ -186,6 +186,8 @@ function getMarchingSquareDirection (value, previousDirection) {
         case 12: return RIGHT; // [LEFT, RIGHT],
         case 13: return RIGHT; // [DOWN, RIGHT],
         case 14: return DOWN; // [LEFT, DOWN],
+        // used when edge of the grid is hit, keep moving in previous direction
+        case 15: return previousDirection;
     };
 }
 
@@ -211,6 +213,8 @@ function getMarchingSquaresContour (cells) {
     let cell = startingCell;
     do {
         let direction = getMarchingSquareDirection(cell.value, previousDirection);
+        if (!direction)
+            console.log(direction, '|', contour)
         cell = getCell(cell.col + direction[0], cell.row + direction[1]);
         contour.push(cell);
         previousDirection = direction;
@@ -249,6 +253,7 @@ function drawMarchingSquares () {
                 stroke: '#000',
                 'stroke-width': 1,
                 fill: rgba(0,0,0,0.2),
+                'class': 'Contour',
             });
     };
     if (points[0].hasOwnProperty('x')) {

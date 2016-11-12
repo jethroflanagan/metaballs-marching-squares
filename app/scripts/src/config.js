@@ -1,9 +1,11 @@
 const margin = 10;
-const width = 400 - margin * 2;
-const height = 600 - margin * 2;
 
 export const dimension = {
     margin,
-    width,
-    height,
+    width: 350 - margin * 2,
+    height: 600 - margin * 2,
+}
+export const grid = {
+    cellWidth: 20,
+    cellHeight: 20,
 }
