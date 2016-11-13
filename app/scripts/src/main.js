@@ -1,7 +1,8 @@
 import { setContainer, drawGrid } from './grid';
-import { dimension } from './config';
+import * as config from './config';
 import { addBalls } from './balls';
 
+const { dimension } = config;
 const svg = d3.select('.App')
     .append('svg')
     .attr('width', dimension.width + dimension.margin * 2)
@@ -11,4 +12,4 @@ const svg = d3.select('.App')
 
 setContainer(svg);
 drawGrid();
-addBalls(svg, 8);
+addBalls(svg, config.balls.numToAdd);

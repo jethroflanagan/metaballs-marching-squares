@@ -1,23 +1,24 @@
-import { dimension } from './config';
+import * as config from './config';
 import { calculateMetaballs } from './grid';
 import { translate, rgba } from './utils';
 
-// const
+const { cellWidth, cellHeight } = config.grid;
+const { dimension } = config;
 
 const balls = [];
 
 function addBalls (container, numBalls) {
     const { drag } = setupInteraction(balls);
     // ensure they are away from edges just for generation
-    const edgePadding = 10;
     for (let i = 0; i < numBalls; i++) {
         const radius = Math.random() * 40 + 25;
-        const padding = edgePadding + radius;
+        const colPadding = cellWidth * 3 + radius;
+        const rowPadding = cellHeight * 3+ radius;
         balls.push({
             radius,
             // ensure they are away from edges
-            x: Math.random() * (dimension.width - padding * 2) + padding,
-            y: Math.random() * (dimension.height - padding * 2) + padding,
+            x: Math.random() * (dimension.width - colPadding * 2) + colPadding,
+            y: Math.random() * (dimension.height - rowPadding * 2) + rowPadding,
             speed: Math.random() * 4 + 1,
             direction: Math.random() * Math.PI * 2,
         });
@@ -55,15 +56,19 @@ function setupInteraction (data) {
             d.x += d3.event.dx;
             d.y += d3.event.dy;
 
+            const minWidth = d.radius + cellWidth;
+            const minHeight = d.radius + cellHeight;
+            const maxWidth = dimension.width - d.radius - cellWidth;
+            const maxHeight = dimension.height - d.radius - cellHeight;
             // constraints
-            if (d.x >= dimension.width)
-                d.x = dimension.width;
-            if (d.y >= dimension.height)
-                d.y = dimension.height;
-            if (d.x <= 0)
-                d.x = 0;
-            if (d.y <= 0)
-                d.y = 0;
+            if (d.x >= maxWidth)
+                d.x = maxWidth;
+            if (d.y >= maxHeight)
+                d.y = maxHeight;
+            if (d.x <= minWidth)
+                d.x = minWidth;
+            if (d.y <= minHeight)
+                d.y = minHeight;
 
             d3.select(this).attr({
                 'transform': d => translate(d.x, d.y),
