@@ -1,6 +1,8 @@
 import * as config from './config';
 import { rgba } from './utils';
 
+const THRESHOLD = .8;
+
 // Use name for cheap comparison
 const LEFT = { x: -1, y: 0, name: 'left'};
 const RIGHT = { x: 1, y: 0, name: 'right'};
@@ -55,37 +57,37 @@ function drawGrid () {
         .enter()
             .append('g');
 
-    debugCellsRect = debugCells
-        .append('rect')
-            .attr(
-            {
-                'class':'Grid-cell',
-                x: d => d.x,
-                y: d => d.y,
-                width: cellWidth,
-                height: cellHeight,
-                fill: d => {
-                    if (d > 1)
-                        d = 1;
-                    if (d < 0)
-                        d = 0;
-                    return rgba(0, 200, 200, d.value)
-                },
-                'shape-rendering': 'crispEdges',
-                stroke: '#eee',
-                // 'stroke-width': '1px'
-            });
-
-    debugCellsText = debugCells
-        .append('text')
-            .attr({
-                fill: 'transparent',
-                'font-family': 'Helvetica',
-                'font-size': '12px',
-                x: d => d.x + cellWidth / 2,
-                y: d => d.y + cellHeight / 2,
-                'text-anchor': 'middle',
-            });
+    // debugCellsRect = debugCells
+    //     .append('rect')
+    //         .attr(
+    //         {
+    //             'class':'Grid-cell',
+    //             x: d => d.x,
+    //             y: d => d.y,
+    //             width: cellWidth,
+    //             height: cellHeight,
+    //             fill: d => {
+    //                 if (d > 1)
+    //                     d = 1;
+    //                 if (d < 0)
+    //                     d = 0;
+    //                 return rgba(0, 200, 200, d.value)
+    //             },
+    //             'shape-rendering': 'crispEdges',
+    //             stroke: '#eee',
+    //             // 'stroke-width': '1px'
+    //         });
+    //
+    // debugCellsText = debugCells
+    //     .append('text')
+    //         .attr({
+    //             fill: '#ccc',
+    //             'font-family': 'Helvetica',
+    //             'font-size': '12px',
+    //             x: d => d.x + cellWidth / 2,
+    //             y: d => d.y + cellHeight / 2,
+    //             'text-anchor': 'middle',
+    //         });
 
 };
 
@@ -100,10 +102,11 @@ function getMarchingSquareCorner (balls, cell, offsetX, offsetY) {
 };
 
 function calculateMarchingSquares (balls) {
+    const simplify = (v) => (v > THRESHOLD ? 1 : 0);
     cells.map( (cell, i) => {
         const x = cells[i].x;
         const y = cells[i].y;
-        const simplify = (v) => (v > 1 ? 1 : 0);
+        // lock values to get simplified lookup
         let sumTL = getMarchingSquareCorner(balls, cell, 0, 0);
         let sumTR = getMarchingSquareCorner(balls, cell, cellWidth, 0);
         let sumBR = getMarchingSquareCorner(balls, cell, cellWidth, cellHeight);
@@ -123,7 +126,6 @@ function calculateMarchingSquares (balls) {
 }
 
 function getLerpForPoints (a, b) {
-    const THRESHOLD = 1;
     return (THRESHOLD - a) / (b - a)
 };
 
@@ -208,6 +210,8 @@ function getEdge (cells, contour) {
 function getMarchingSquaresContour (cells) {
     let previousDirection = DOWN; // set to DOWN for offgrid handling
     const startingCell = getEdge(cells);
+    if (!startingCell)
+        return;
     let contour = [];
     let cell = startingCell;
     do {
@@ -301,7 +305,10 @@ function getMarchingSquaresContour (cells) {
         contour.push({
             x: cell.x + direction.x * cellWidth / 2 + lerpX,
             y: cell.y + direction.y * cellHeight / 2 + lerpY,
+            cell: cell,
         });
+        // HACK
+        cells.splice(cells.indexOf(cell), 1);
         cell = nextCell;
         previousDirection = direction;
     } while (cell !== startingCell);
@@ -312,7 +319,7 @@ function getMarchingSquaresContour (cells) {
 function drawMarchingSquares () {
     container
         // select('g')
-        .selectAll('path')
+        .selectAll('.paths')
         .remove()
 
 
@@ -322,8 +329,8 @@ function drawMarchingSquares () {
     const h2 = cellHeight / 2; // cache
 
     let availableCells = cells.filter(cell => cell.value > 0 && cell.value < 15);
-    const points = getMarchingSquaresContour(availableCells);
-
+    while (availableCells.length) {
+    let points = getMarchingSquaresContour(availableCells);
     if (!points)
         return;
 
@@ -331,7 +338,7 @@ function drawMarchingSquares () {
         const path = d3.svg.line()
             .x(d => d.x + w2) // w2 draw through middle of cell
             .y(d => d.y + h2) // h2 draw through middle of cell
-            .interpolate('linear');
+            .interpolate('basis');
 
         allPaths
             .append('path')
@@ -343,14 +350,8 @@ function drawMarchingSquares () {
                 'class': 'Contour',
             });
     };
-    if (points[0].hasOwnProperty('x')) {
-        // points[0].x
-        draw(points);
-    }
-    else {
-        draw(points[0]);
-        draw(points[1]);
-    }
+    draw(points);
+}
 }
 
 function calculateMetaballs (balls) {
@@ -374,7 +375,7 @@ function calculateMetaballs (balls) {
     // console.log(cells);
 }
 
-function update () {
+function update () {return
     debugCellsRect
         .attr('fill', d => {
             var brightness = d.value;

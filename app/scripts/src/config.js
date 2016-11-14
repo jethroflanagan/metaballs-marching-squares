@@ -6,9 +6,9 @@ export const dimension = {
     height: 600 - margin * 2,
 }
 export const grid = {
-    cellWidth: 20,
-    cellHeight: 20,
+    cellWidth: 8,
+    cellHeight: 8,
 }
 export const balls = {
-    numToAdd: 4,
+    numToAdd: 6,
 }
