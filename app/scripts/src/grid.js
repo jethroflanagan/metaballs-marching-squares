@@ -223,9 +223,11 @@ function getMarchingSquaresContour (cells) {
         let nextCell = getCell(cell.col + direction.x, cell.row + direction.y);
         // Handle offgrid positions by drawing along the edges
         if (!nextCell) {
-            // top left cell handled by 'DOWN' default direction
             // special case on top right cell
-            if (cell.col === numColumns -1 && cell.row === 0) {
+            if (cell.col === 0 && cell.row === 0) {
+                direction = DOWN;
+            }
+            else if (cell.col === numColumns -1 && cell.row === 0) {
                 direction = LEFT;
             }
             // special case on bottom right cell
@@ -329,50 +331,37 @@ function drawMarchingSquares () {
     const h2 = cellHeight / 2; // cache
 
     let availableCells = cells.filter(cell => cell.value > 0 && cell.value < 15);
+    let paths = [];
     while (availableCells.length) {
-    let points = getMarchingSquaresContour(availableCells);
-    if (!points)
-        return;
+        let points = getMarchingSquaresContour(availableCells);
+        paths.push(points);
+        if (!points) {
+            break;
+        }
+    }
 
-    const draw = (points) => {
-        const path = d3.svg.line()
-            .x(d => d.x + w2) // w2 draw through middle of cell
-            .y(d => d.y + h2) // h2 draw through middle of cell
-            .interpolate('basis');
+    const path = d3.svg.line()
+        .x(d => d.x + w2) // w2 draw through middle of cell
+        .y(d => d.y + h2) // h2 draw through middle of cell
+        .interpolate('basis');
 
-        allPaths
-            .append('path')
-            .attr({
-                d: path(points),
-                stroke: '#000',
-                'stroke-width': 1,
-                fill: rgba(0,0,0,0.2),
-                'class': 'Contour',
-            });
-    };
-    draw(points);
-}
+    // merge all paths together, and translate with `path`
+    paths = paths.map(path);
+    allPaths
+        .append('path')
+        .attr({
+            d: paths,
+            stroke: '#000',
+            'stroke-width': 1,
+            fill: rgba(0,0,0,0.2),
+            'class': 'Contour',
+        });
 }
 
 function calculateMetaballs (balls) {
     calculateMarchingSquares(balls);
     drawMarchingSquares();
-    //
-    // const w2 = cellWidth / 2; // cache
-    // const h2 = cellHeight / 2; // cache
-    // cells.map( (cell, i) => {
-    //     const x = cells[i].x;
-    //     const y = cells[i].y;
-    //     let sum = balls.reduce( (total, ball) => {
-    //         let dx = cell.x + w2 - ball.x;
-    //         let dy = cell.y + h2 - ball.y;
-    //         let r = ball.radius;
-    //         return total + (r * r) / ((dx * dx) + (dy * dy));
-    //     }, 0);
-    //     cell.value = sum;
-    // });
     update();
-    // console.log(cells);
 }
 
 function update () {return
@@ -403,5 +392,4 @@ export {
     setContainer,
     drawGrid,
     calculateMetaballs,
-    // calculateMarchingSquares,
 };
