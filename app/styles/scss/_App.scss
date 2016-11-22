@@ -1,6 +1,7 @@
 .App {
-    min-width: 100vw;
-    min-height: 100vh;
+    background: #eee;
+    width: 100vw;
+    height: 100vh;
     & svg {
         overflow: visible;
     //     position: fixed;
@@ -9,4 +10,10 @@
     //     left: 0;
     //     right: 0;
     }
+}
+.Contour {
+    pointer-events: none;
+}
+
+.Grid {
 }
