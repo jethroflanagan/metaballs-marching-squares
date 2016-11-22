@@ -1,7 +1,6 @@
 import * as config from './config';
 import { rgba } from './utils';
 
-const THRESHOLD = .8;
 
 // Use name for cheap comparison
 const LEFT = { x: -1, y: 0, name: 'left'};
@@ -20,12 +19,14 @@ const yScale = d3.scale.linear()
 const numColumns = Math.ceil(yScale(1) / cellWidth);
 const numRows = Math.ceil(xScale(1) / cellHeight);
 
-const reduction = 2;
-const threshold = 0.3;
-const rangeMultiplier = 1 / (1 - threshold);
+// const reduction = 2;
+// const threshold = 0.9;
+// const rangeMultiplier = 1 / (1 - threshold);
+
+let threshold = .4;
 
 let container = null;
-console.log(numColumns, numRows);
+console.log('Grid resolution: ', numColumns + ', ' + numRows);
 // 1D array, all values set to 0, mod `numColumns` is a new row
 // 2D arrays become clumsy with d3
 let cells = d3.range(numRows * numColumns)
@@ -102,7 +103,7 @@ function getMarchingSquareCorner (balls, cell, offsetX, offsetY) {
 };
 
 function calculateMarchingSquares (balls) {
-    const simplify = (v) => (v > THRESHOLD ? 1 : 0);
+    const simplify = (v) => (v > threshold ? 1 : 0);
     cells.map( (cell, i) => {
         const x = cells[i].x;
         const y = cells[i].y;
@@ -122,11 +123,11 @@ function calculateMarchingSquares (balls) {
             (simplify(sumTL) << 3);
         cell.rawValue = [sumBL, sumBR, sumTR, sumTL];
     });
-    update();
+    // update();
 }
 
 function getLerpForPoints (a, b) {
-    return (THRESHOLD - a) / (b - a)
+    return (threshold - a) / (b - a)
 };
 
 // get x,y back as (0-2, 0-2)->(0-2, 0-2) for a line within square from edge to edge
@@ -286,6 +287,7 @@ function getMarchingSquaresContour (cells) {
             direction === DOWN && previousDirection === UP) {
             console.error('Endless loop detected', cell);
             debugger
+            return null;
         }
         // TODO simplify lerping
         let lerpX = 0;
@@ -334,6 +336,10 @@ function drawMarchingSquares () {
     let paths = [];
     while (availableCells.length) {
         let points = getMarchingSquaresContour(availableCells);
+        if (!points) {
+            console.error('`getMarchingSquaresContour` failed');
+            break;
+        }
         paths.push(points);
         if (!points) {
             break;
@@ -361,7 +367,7 @@ function drawMarchingSquares () {
 function calculateMetaballs (balls) {
     calculateMarchingSquares(balls);
     drawMarchingSquares();
-    update();
+    // update();
 }
 
 function update () {return
@@ -376,7 +382,7 @@ function update () {return
             if (brightness < threshold)
                 brightness = 0;
             else
-                brightness = 0.5;// (brightness - threshold) * rangeMultiplier * reduction;
+                brightness = 0.5//(brightness - threshold) * rangeMultiplier * reduction;
             return rgba(0, 200, 200, brightness)
         });
     debugCellsText
@@ -388,8 +394,16 @@ function setContainer (element) {
     container = element;
 }
 
+// accepts 0-1
+function setThreshold (value) {
+    const min = 0.2;
+    const max = 2;
+    threshold = value * (max - min) + min;
+}
+
 export {
     setContainer,
     drawGrid,
     calculateMetaballs,
+    setThreshold,
 };
